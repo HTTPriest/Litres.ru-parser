@@ -11,4 +11,13 @@ import scrapy
 class LitresItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
+    name = scrapy.Field()
+    author = scrapy.Field()
+    rating = scrapy.Field()
+    genres = scrapy.Field()
+    tags = scrapy.Field()
+    price = scrapy.Field()
+    description = scrapy.Field()
+    ISBN = scrapy.Field()
+
     pass
