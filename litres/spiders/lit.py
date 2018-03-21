@@ -21,6 +21,16 @@ class LitSpider(scrapy.Spider):
                                   },
                             endpoint='render.json')
 
+        for i in range(1, 2):
+            link = 'https://www.litres.ru/legkoe-chtenie/page-%i/' % i
+            yield SplashRequest(link,
+                                callback=self.parse,
+                                args={'wait': 2,
+                                      'html': 1,
+                                      },
+                                endpoint='render.json')
+
+
     def parse(self, response):
         items = response.xpath('//div[@class="books_box"]//div[@class="art-item__name"]')
         #self.log(items)
@@ -36,6 +46,14 @@ class LitSpider(scrapy.Spider):
                                       },
                                 endpoint='render.json')
 
+    def seq(self, sequence, path):
+        tags = []
+        for s in sequence.xpath(path):
+            s = s.xpath('string(.)').extract()[0]
+            tags.append(s)
+        return tags
+
+
     def parse_item(self, response):
         prefix = randint(0, 999)
 
@@ -44,20 +62,20 @@ class LitSpider(scrapy.Spider):
         with open('save/%soutput.html' % prefix, 'w') as f:
             f.write(response.data['html'])
 
+        tags = response.xpath('//li[@class="tags_list"]')
+        genres = response.xpath('//div[@class="biblio_book_info"]/ul/li[2]')
+        desc = [response.xpath('string(//div[@class="biblio_book_descr_publishers"])').extract(),
+                response.xpath('string(//div[@itempror="description"])').extract(),
+                response.xpath('string(//div[@class="biblio_book_descr_publishers hide"])').extract()]
+
         book = LitresItem()
         book['name'] = response.xpath('//h1[@itemprop="name"]/text()').extract()
         book['author'] = response.xpath('//div[@class="biblio_book_author"]/a[@class="biblio_book_author__link"]/text()').extract()
         book['rating'] = response.xpath('//div[@itemprop="aggregateRating"]//span[@class="show_mid_vote"]/text()').extract()
-        book['genres'] = response.xpath('//div[@class="biblio_book_info"]//li[2]/a/text()').extract()
-        book['tags'] = []
-        for tag in response.xpath('//div[@class="biblio_book_info"]//li[@class="tags_list"]'):
-            tagr = tag.xpath('.//a/span[@class="uppercase"]/text()').extract()[0] + tag.xpath('.//a/text()').extract()[0]
-            self.log('YOYOOYo')
-            self.log(tagr)
-            print(type(tagr))
-            book['tags'] = tagr
+        book['tags'] = self.seq(tags, './a')
+        book['genres'] = self.seq(genres, './a')
         book['price'] = response.xpath('//div[@id="unr_buynow"]//span[@class="simple-price"]/text()').extract()
-        book['description'] = response.xpath('//div[@class="biblio_book_descr_publishers"]/p/text()').extract()
+        book['description'] = [descr[0].replace(u'\xa0', ' ') for descr in desc if descr[0] is not '']
         book['ISBN'] = response.xpath('//span[@itemprop="isbn"]/text()').extract()
         self.log(book)
         yield book
