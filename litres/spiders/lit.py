@@ -69,6 +69,7 @@ class LitSpider(scrapy.Spider):
                 response.xpath('string(//div[@class="biblio_book_descr_publishers hide"])').extract()]
 
         book = LitresItem()
+        book['btype'] = response.xpath('//div[@class="biblio_book_type"]/text()').extract()[0]
         book['name'] = response.xpath('//h1[@itemprop="name"]/text()').extract()
         book['author'] = response.xpath('//div[@class="biblio_book_author"]/a[@class="biblio_book_author__link"]/text()').extract()
         book['rating'] = response.xpath('//div[@itemprop="aggregateRating"]//span[@class="show_mid_vote"]/text()').extract()
@@ -77,6 +78,6 @@ class LitSpider(scrapy.Spider):
         book['price'] = response.xpath('//div[@id="unr_buynow"]//span[@class="simple-price"]/text()').extract()
         book['description'] = [descr[0].replace(u'\xa0', ' ') for descr in desc if descr[0] is not '']
         book['ISBN'] = response.xpath('//span[@itemprop="isbn"]/text()').extract()
-        self.log(book)
+        #self.log(book)
         yield book
 
