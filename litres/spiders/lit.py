@@ -4,6 +4,7 @@ from scrapy_splash import SplashRequest
 from litres.items import LitresItem
 from base64 import b64decode
 from random import randint
+from urllib.parse import urljoin
 
 
 class LitSpider(scrapy.Spider):
@@ -13,7 +14,26 @@ class LitSpider(scrapy.Spider):
 
 
     def start_requests(self):
-        yield SplashRequest('https://www.litres.ru/legkoe-chtenie/',
+        yield SplashRequest('https://www.litres.ru/pages/new_genres/',
+                            callback=self.grab_genres,
+                            args={'wait': 2,
+                                  'html': 1,
+                                  },
+                            endpoint='render.json')
+
+
+    def grab_genres(self, response):
+        links = response.xpath('//a[contains(., "Все книги")]/@href')
+        self.log('Genres extracted :: ')
+        self.log(links)
+        for link in links:
+            self.parse_genre(link.extract())
+
+
+
+    def parse_genre(self, link):
+        uri = urljoin('https://www.litres.ru/', link)
+        yield SplashRequest(uri,
                             callback=self.parse,
                             args={'wait': 2,
                                   'html': 1,
@@ -21,9 +41,10 @@ class LitSpider(scrapy.Spider):
                                   },
                             endpoint='render.json')
 
-        for i in range(1, 2):
-            link = 'https://www.litres.ru/legkoe-chtenie/page-%i/' % i
-            yield SplashRequest(link,
+        for i in range(1, 50):
+            page = '/page-%i/' % i
+            pages = urljoin(uri, page)
+            yield SplashRequest(pages,
                                 callback=self.parse,
                                 args={'wait': 2,
                                       'html': 1,
@@ -69,6 +90,7 @@ class LitSpider(scrapy.Spider):
                 response.xpath('string(//div[@class="biblio_book_descr_publishers hide"])').extract()]
 
         book = LitresItem()
+        book['link'] = response.url
         book['btype'] = response.xpath('//div[@class="biblio_book_type"]/text()').extract()[0]
         book['name'] = response.xpath('//h1[@itemprop="name"]/text()').extract()
         book['author'] = response.xpath('//div[@class="biblio_book_author"]/a[@class="biblio_book_author__link"]/text()').extract()
