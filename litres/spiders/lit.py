@@ -27,24 +27,25 @@ class LitSpider(scrapy.Spider):
         self.log('Genres extracted :: ')
         self.log(links)
         for link in links:
-            self.parse_genre(link.extract())
+            uri = urljoin('https://www.litres.ru/', link.extract())
+            self.log('uri for genre :: %s' % uri)
+            yield SplashRequest(uri,
+                                callback=self.parse_genre,
+                                args={'wait': 2,
+                                      'html': 1,
+                                      'png': 1,
+                                      },
+                                endpoint='render.json')
 
+    def parse_genre(self, response):
+        #   parse page 1
+        self.parse(response)
 
-
-    def parse_genre(self, link):
-        uri = urljoin('https://www.litres.ru/', link)
-        yield SplashRequest(uri,
-                            callback=self.parse,
-                            args={'wait': 2,
-                                  'html': 1,
-                                  'png': 1,
-                                  },
-                            endpoint='render.json')
-
+        #   parse next pages
         for i in range(1, 50):
-            page = '/page-%i/' % i
-            pages = urljoin(uri, page)
-            yield SplashRequest(pages,
+            page = 'page-%i/' % i
+            uri = response.url + page
+            yield SplashRequest(uri,
                                 callback=self.parse,
                                 args={'wait': 2,
                                       'html': 1,
