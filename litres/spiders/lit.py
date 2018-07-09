@@ -41,6 +41,22 @@ class LitSpider(scrapy.Spider):
         #   parse page 1
         self.parse(response)
 
+        lua_script = """
+            function main(splash, args)
+                assert(splash:go{splash.args.url,http_method=splash.args.http_method,body=splash.args.body})
+                assert(splash:wait(0.5))
+                
+                splash:on_request(function(request)
+                    request:set_proxy{
+                        host = args.proxy_url,
+                        port = args.proxy_port
+                    }
+                end)
+                
+                return splash:html()
+            end
+            """
+
         #   parse next pages
         for i in range(1, 50):
             page = 'page-%i/' % i
@@ -50,7 +66,7 @@ class LitSpider(scrapy.Spider):
                                 args={'wait': 2,
                                       'html': 1,
                                       },
-                                endpoint='render.json')
+                                endpoint='execute')
 
 
     def parse(self, response):
@@ -77,12 +93,14 @@ class LitSpider(scrapy.Spider):
 
 
     def parse_item(self, response):
+        '''
+            ~~~ Debug ~~~
         prefix = randint(0, 999)
-
         with open('save/%soutput.png' % prefix, 'wb') as f:
             f.write(b64decode(response.data['png']))
         with open('save/%soutput.html' % prefix, 'w') as f:
             f.write(response.data['html'])
+        '''
 
         tags = response.xpath('//li[@class="tags_list"]')
         genres = response.xpath('//div[@class="biblio_book_info"]/ul/li[2]')
